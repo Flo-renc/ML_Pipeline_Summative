@@ -14,7 +14,7 @@ pydantic>=2.7.0
 
 # TensorFlow CPU (no GPU on Render — saves ~500MB and avoids CUDA errors)
 # Do NOT pin keras separately: TF 2.16+ installs the correct Keras 3 automatically
-tensorflow-cpu==2.16.1
+tensorflow==2.16.1
 
 # OpenCV
 opencv-python-headless
