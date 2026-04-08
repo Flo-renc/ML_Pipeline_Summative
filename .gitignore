@@ -1,0 +1,15 @@
+database.py
+rl-env/
+*.pyc
+__pycache__/
+# OS files
+.DS_Store
+Thumbs.db
+# Docker
+*.tar
+
+# Locust output
+*.csv
+*.html
+
+*.log
