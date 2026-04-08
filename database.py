@@ -32,7 +32,7 @@ db_name = os.getenv("DB_NAME", "character_prediction_model")     # Replace with 
 
 # 2. Add '+asyncpg' to the URL (required for create_async_engine)
 # 3. Use the variables in the f-string
-DATABASE_URL = f"mysql+aiomysql://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
+DATABASE_URL = f"mysql+asyncpg://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
 
 engine = create_async_engine(DATABASE_URL, echo=True)
 
