@@ -27,6 +27,11 @@ from src.prediction import CharacterPredictor
 from database import engine, Base, init_db, SessionLocal
 from database_model import Prediction
 
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' # Suppress TF logging
+import tensorflow as tf
+tf.config.set_visible_devices([], 'GPU') # Force CPU only
+
 
 # ============================================================
 # CONFIG — use Path consistently throughout
@@ -638,6 +643,6 @@ def format_uptime(seconds: float):
 # ============================================================
 # RUN DIRECTLY
 # ============================================================
-if __name__ == "__main__":
+"""if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)"""
