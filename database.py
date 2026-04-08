@@ -24,15 +24,17 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
 
 # 1. Get your actual credentials from environment variables
-db_user = os.getenv("DB_USER", "mysql")        # Replace 'postgres' with your default user
+db_user = os.getenv("DB_USER")        # Replace 'postgres' with your default user
 db_pass = os.getenv("DB_PASSWORD")
-db_host = os.getenv("DB_HOST", "localhost")      # Replace with your actual database host
-db_port = os.getenv("DB_PORT", "8000")           # Replace with your actual port
-db_name = os.getenv("DB_NAME", "character_prediction_model")     # Replace with your actual database name
+db_host = os.getenv("DB_HOST")      # Replace with your actual database host
+db_port = os.getenv("DB_PORT", "4000")           # Replace with your actual port
+db_name = os.getenv("DB_NAME")     # Replace with your actual database name
 
 # 2. Add '+asyncpg' to the URL (required for create_async_engine)
 # 3. Use the variables in the f-string
-DATABASE_URL = f"mysql+asyncpg://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
+# Use this exact line in your database.py
+DATABASE_URL = f"mysql+aiomysql://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}?ssl=true"
+
 
 engine = create_async_engine(DATABASE_URL, echo=True)
 
