@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Training & Batch Prediction | Character Recognition</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+:root {
+    --primary-color: #4361ee;
+    --secondary-color: #3f37c9;
+    --success-color: #06d6a0;
+    --danger-color: #ef476f;
+    --warning-color: #ffd166;
+    --dark-color: #1a1a2e;
+    --light-color: #f8f9fa;
+}
+
+/* ── Base ── */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px 0;
+}
+
+/* ── Navbar ── */
+.navbar { background: rgba(255,255,255,0.95) !important; backdrop-filter: blur(10px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+.navbar-brand { font-weight: 700; color: var(--primary-color) !important; font-size: 1.5rem; }
+.nav-link { color: var(--dark-color) !important; font-weight: 500; margin: 0 10px; transition: color 0.3s; }
+.nav-link:hover, .nav-link.active { color: var(--primary-color) !important; }
+
+/* ── Layout ── */
+.container-main { max-width: 1200px; margin: 40px auto; }
+
+/* ── Cards ── */
+.card { border: none; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); background: white; margin-bottom: 30px; }
+.card-header { color: white; border-radius: 20px 20px 0 0 !important; padding: 20px; border: none; }
+.card-header.purple  { background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); }
+.card-header.teal    { background: linear-gradient(135deg, #06d6a0, #00b4d8); }
+.card-header.orange  { background: linear-gradient(135deg, #f77f00, #fcbf49); }
+.card-header h3 { margin: 0; font-weight: 600; }
+
+/* ── Upload areas ── */
+.upload-area {
+    border: 3px dashed var(--primary-color);
+    border-radius: 15px;
+    padding: 50px 20px;
+    text-align: center;
+    background: linear-gradient(135deg, rgba(67,97,238,0.05), rgba(63,55,201,0.05));
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+}
+.upload-area:hover { border-color: var(--secondary-color); background: linear-gradient(135deg, rgba(67,97,238,0.1), rgba(63,55,201,0.1)); transform: scale(1.01); }
+.upload-area.dragover { border-color: var(--success-color); background: rgba(6,214,160,0.08); transform: scale(1.02); }
+.upload-area i { font-size: 3.5rem; color: var(--primary-color); margin-bottom: 15px; }
+.upload-area p { font-size: 1.1rem; color: var(--dark-color); margin: 8px 0; }
+
+/* ── Buttons ── */
+.btn-primary { border: none; padding: 12px 30px; border-radius: 10px; font-weight: 600; transition: transform 0.2s, box-shadow 0.2s; background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); }
+.btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(67,97,238,0.4); }
+.btn-success { border: none; padding: 12px 30px; border-radius: 10px; font-weight: 600; transition: transform 0.2s, box-shadow 0.2s; background: linear-gradient(135deg, #06d6a0, #00b4d8); }
+.btn-success:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(6,214,160,0.4); }
+.btn-warning-custom { border: none; padding: 12px 30px; border-radius: 10px; font-weight: 600; transition: transform 0.2s; background: linear-gradient(135deg, #f77f00, #fcbf49); color: white; }
+.btn-warning-custom:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(247,127,0,0.4); color: white; }
+.spinner-border { display: none; }
+.loading .spinner-border { display: inline-block; }
+
+/* ── File chips ── */
+.file-chips-wrap { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; max-height: 150px; overflow-y: auto; padding: 4px; }
+.file-chip {
+    background: rgba(67,97,238,0.1);
+    border: 1px solid rgba(67,97,238,0.25);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 0.8rem;
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 240px;
+}
+.file-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip-remove { cursor: pointer; font-size: 1rem; line-height: 1; color: var(--danger-color); font-weight: 700; flex-shrink: 0; }
+.chip-remove:hover { opacity: 0.65; }
+.file-count-badge {
+    display: inline-block;
+    background: rgba(67,97,238,0.12);
+    color: var(--primary-color);
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    margin-top: 10px;
+}
+
+/* ── Status messages ── */
+.status-msg { display: none; border-radius: 12px; padding: 14px 18px; margin-top: 18px; font-size: 0.93rem; font-weight: 500; }
+.status-msg.info    { background: rgba(67,97,238,0.1);  color: var(--primary-color);    border-left: 4px solid var(--primary-color); }
+.status-msg.success { background: rgba(6,214,160,0.1);  color: #048a63;                 border-left: 4px solid var(--success-color); }
+.status-msg.error   { background: rgba(239,71,111,0.1); color: #b52246;                 border-left: 4px solid var(--danger-color); }
+.status-msg.warning { background: rgba(255,209,102,0.2);color: #856404;                 border-left: 4px solid var(--warning-color); }
+
+/* ── Label input row ── */
+.label-row { display: flex; align-items: center; gap: 14px; margin-top: 20px; flex-wrap: wrap; }
+.label-row label { font-weight: 600; color: var(--dark-color); white-space: nowrap; min-width: fit-content; }
+.label-row input[type=text] {
+    flex: 1; min-width: 140px;
+    padding: 10px 16px; border: 2px solid rgba(67,97,238,0.3); border-radius: 10px;
+    font-size: 1rem; outline: none; transition: border-color 0.2s;
+}
+.label-row input[type=text]:focus { border-color: var(--primary-color); }
+
+/* ── Hyperparameter inputs ── */
+.form-control { border: 2px solid rgba(67,97,238,0.2); border-radius: 10px; padding: 10px 14px; transition: border-color 0.2s; }
+.form-control:focus { border-color: var(--primary-color); box-shadow: none; }
+.form-label { font-weight: 600; color: var(--dark-color); }
+
+/* ── Training progress ── */
+.training-progress-wrap { display: none; margin-top: 20px; }
+.progress-label { display: flex; justify-content: space-between; font-size: 0.88rem; color: #6c757d; margin-bottom: 6px; }
+.progress { height: 12px; border-radius: 8px; background: rgba(67,97,238,0.1); }
+.progress-bar-custom { height: 100%; border-radius: 8px; background: linear-gradient(90deg, var(--primary-color), var(--secondary-color)); transition: width 0.6s ease; width: 0%; }
+.training-stats-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+.training-stat { flex: 1; min-width: 120px; background: var(--light-color); border-radius: 12px; padding: 14px; text-align: center; }
+.training-stat .ts-value { font-size: 1.4rem; font-weight: 700; color: var(--primary-color); }
+.training-stat .ts-label { font-size: 0.78rem; color: #6c757d; margin-top: 4px; }
+
+/* ── Batch results ── */
+.batch-results-wrap { display: none; margin-top: 24px; animation: fadeIn 0.4s; }
+@keyframes fadeIn { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: translateY(0); } }
+
+.summary-cards { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 20px; }
+.summary-card { flex: 1; min-width: 140px; background: var(--light-color); border-radius: 14px; padding: 18px 14px; text-align: center; }
+.summary-card .sc-val { font-size: 1.7rem; font-weight: 700; color: var(--primary-color); }
+.summary-card .sc-lbl { font-size: 0.78rem; color: #6c757d; margin-top: 4px; }
+
+.table-scroll-wrap { max-height: 400px; overflow-y: auto; border-radius: 14px; border: 1px solid #e9ecef; }
+table.rt { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+table.rt thead th { background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white; padding: 12px 16px; position: sticky; top: 0; text-align: left; font-weight: 600; }
+table.rt tbody tr:nth-child(even) { background: #f8f9fa; }
+table.rt tbody tr:hover { background: rgba(67,97,238,0.04); }
+table.rt tbody td { padding: 10px 16px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+
+.char-big { font-size: 1.5rem; font-weight: 700; color: var(--primary-color); }
+.conf-pill { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+.conf-high { background: rgba(6,214,160,0.15);  color: #048a63; }
+.conf-mid  { background: rgba(255,193,7,0.2);   color: #856404; }
+.conf-low  { background: rgba(239,71,111,0.15); color: #b52246; }
+.fname-cell { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #6c757d; font-size: 0.82rem; }
+
+/* ── Footer ── */
+.footer { text-align: center; color: white; padding: 20px; margin-top: 30px; }
+</style>
+</head>
+<body>
+
+<!-- ── Navbar ── -->
+<nav class="navbar navbar-expand-lg navbar-light sticky-top">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/"><i class="fas fa-brain"></i> Character Recognition</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item"><a class="nav-link" href="/"><i class="fas fa-home"></i> Home</a></li>
+        <li class="nav-item"><a class="nav-link" href="/dashboard"><i class="fas fa-chart-line"></i> Dashboard</a></li>
+        <li class="nav-item"><a class="nav-link active" href="/training"><i class="fas fa-graduation-cap"></i> Training</a></li>
+        <li class="nav-item"><a class="nav-link" href="/docs" target="_blank"><i class="fas fa-book"></i> API Docs</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="container container-main">
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 1 — BATCH PREDICTION
+  ════════════════════════════════════════════════════════════ -->
+  <div class="card">
+    <div class="card-header teal">
+      <h3><i class="fas fa-layer-group"></i> Batch Prediction</h3>
+    </div>
+    <div class="card-body">
+      <p class="text-muted mb-4">
+        Upload multiple images and run predictions on all of them in one request.
+        Maximum <strong>100 images</strong> per batch.
+      </p>
+
+      <div class="upload-area" id="batchUploadArea">
+        <i class="fas fa-images"></i>
+        <p><strong>Click to upload</strong> or drag and drop multiple images</p>
+        <p class="text-muted">PNG / JPG — up to 100 images</p>
+        <input type="file" id="batchInput" accept="image/*" multiple style="display:none;">
+      </div>
+
+      <!-- File chips -->
+      <div class="file-chips-wrap" id="batchChips"></div>
+
+      <div class="text-center mt-4 d-flex justify-content-center gap-3 flex-wrap">
+        <button class="btn btn-success btn-lg" id="batchPredictBtn" disabled>
+          <i class="fas fa-bolt"></i> Run Batch Prediction
+          <span class="spinner-border spinner-border-sm ms-2"></span>
+        </button>
+        <button class="btn btn-outline-secondary btn-lg" id="batchClearBtn" style="display:none; border-radius:10px;">
+          <i class="fas fa-times"></i> Clear All
+        </button>
+      </div>
+
+      <div class="status-msg" id="batchStatus"></div>
+
+      <!-- Results -->
+      <div class="batch-results-wrap" id="batchResultsWrap">
+        <hr>
+        <h5 class="mb-3"><i class="fas fa-table me-2"></i>Results</h5>
+        <div class="summary-cards" id="batchSummaryCards"></div>
+        <div class="table-scroll-wrap">
+          <table class="rt">
+            <thead>
+              <tr>
+                <th style="width:44px">#</th>
+                <th>File</th>
+                <th style="width:100px">Predicted</th>
+                <th style="width:130px">Confidence</th>
+                <th style="width:100px">Time (ms)</th>
+              </tr>
+            </thead>
+            <tbody id="batchTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 2 — UPLOAD TRAINING DATA
+  ════════════════════════════════════════════════════════════ -->
+  <div class="card">
+    <div class="card-header orange">
+      <h3><i class="fas fa-database"></i> Upload Training Data</h3>
+    </div>
+    <div class="card-body">
+      <p class="text-muted mb-4">
+        Upload labelled images to the retraining dataset. All images in one upload must belong to
+        the <strong>same character class</strong>. Repeat for each label you want to add.
+      </p>
+
+      <div class="upload-area" id="dataUploadArea">
+        <i class="fas fa-cloud-upload-alt"></i>
+        <p><strong>Click to upload</strong> or drag and drop images</p>
+        <p class="text-muted">PNG / JPG — multiple files allowed</p>
+        <input type="file" id="dataInput" accept="image/*" multiple style="display:none;">
+      </div>
+
+      <div class="file-chips-wrap" id="dataChips"></div>
+
+      <div class="label-row">
+        <label for="labelInput"><i class="fas fa-tag me-1"></i> Character label:</label>
+        <input type="text" id="labelInput" placeholder="e.g.  A  or  b  or  3" maxlength="10">
+        <button class="btn btn-warning-custom" id="uploadDataBtn" disabled>
+          <i class="fas fa-upload"></i> Upload Data
+          <span class="spinner-border spinner-border-sm ms-2"></span>
+        </button>
+      </div>
+
+      <div class="status-msg" id="dataStatus"></div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 3 — RETRAIN MODEL
+  ════════════════════════════════════════════════════════════ -->
+  <div class="card">
+    <div class="card-header purple">
+      <h3><i class="fas fa-sync-alt"></i> Retrain Model</h3>
+    </div>
+    <div class="card-body">
+      <p class="text-muted mb-4">
+        Trigger fine-tuning on data you uploaded above. Make sure at least one label folder has
+        images before starting.
+      </p>
+
+      <div class="row g-3 mb-4">
+        <div class="col-md-6">
+          <label class="form-label">Epochs</label>
+          <input type="number" class="form-control" id="epochsInput" value="5" min="1" max="100">
+          <small class="text-muted">How many passes over the training data (1–100)</small>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Learning Rate</label>
+          <input type="number" class="form-control" id="lrInput" value="0.0001" min="0.000001" max="0.1" step="0.000001">
+          <small class="text-muted">Smaller = slower but safer fine-tuning (e.g. 0.0001)</small>
+        </div>
+      </div>
+
+      <div class="text-center">
+        <button class="btn btn-primary btn-lg" id="retrainBtn">
+          <i class="fas fa-sync-alt"></i> Start Retraining
+          <span class="spinner-border spinner-border-sm ms-2"></span>
+        </button>
+      </div>
+
+      <!-- Live training progress -->
+      <div class="training-progress-wrap" id="trainingProgressWrap">
+        <div class="progress-label">
+          <span id="progressLabel">Training…</span>
+          <span id="progressPct">0%</span>
+        </div>
+        <div class="progress">
+          <div class="progress-bar-custom" id="progressBar"></div>
+        </div>
+        <div class="training-stats-row" id="trainingStats"></div>
+      </div>
+
+      <div class="status-msg" id="retrainStatus"></div>
+    </div>
+  </div>
+
+</div><!-- /container-main -->
+
+<div class="footer">
+  <p>Handwritten Character Recognition System | MLOps Project 2026</p>
+  <p>Built with TensorFlow, FastAPI, and ❤️</p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+"use strict";
+
+const API_BASE = "http://127.0.0.1:8000";
+
+/* ─────────────────────────────────────────────────────────────
+   HELPERS
+───────────────────────────────────────────────────────────── */
+function setStatus(el, html, type = "info") {
+  el.className = `status-msg ${type}`;
+  el.innerHTML = html;
+  el.style.display = "block";
+}
+function clearStatus(el) { el.style.display = "none"; }
+
+function confClass(pct) {
+  if (pct >= 75) return "conf-high";
+  if (pct >= 40) return "conf-mid";
+  return "conf-low";
+}
+
+/* Makes a drag-and-drop + click upload area and returns a FileList manager.
+   onUpdate(files) is called whenever the selection changes. */
+function makeUploader(areaId, inputId, chipsId, onUpdate) {
+  const area  = document.getElementById(areaId);
+  const input = document.getElementById(inputId);
+  const chips = document.getElementById(chipsId);
+  let files = [];
+
+  function add(incoming) {
+    const valid = Array.from(incoming).filter(f => f.type.startsWith("image/"));
+    if (!valid.length) return false;
+    files = [...files, ...valid];
+    render();
+    return true;
+  }
+
+  function render() {
+    chips.innerHTML = "";
+    files.forEach((f, i) => {
+      const chip = document.createElement("div");
+      chip.className = "file-chip";
+      chip.innerHTML = `<span title="${f.name}">${f.name}</span><span class="chip-remove" data-i="${i}">&times;</span>`;
+      chip.querySelector(".chip-remove").addEventListener("click", () => {
+        files.splice(i, 1);
+        render();
+      });
+      chips.appendChild(chip);
+    });
+    onUpdate([...files]);
+    input.value = ""; // allow re-selecting same files
+  }
+
+  function clear() { files = []; chips.innerHTML = ""; onUpdate([]); }
+  function get() { return [...files]; }
+
+  area.addEventListener("click", () => input.click());
+  area.addEventListener("dragover",  e => { e.preventDefault(); area.classList.add("dragover"); });
+  area.addEventListener("dragleave", ()  => area.classList.remove("dragover"));
+  area.addEventListener("drop", e => {
+    e.preventDefault(); area.classList.remove("dragover");
+    if (e.dataTransfer.files.length) add(e.dataTransfer.files);
+  });
+  input.addEventListener("change", e => { if (e.target.files.length) add(e.target.files); });
+
+  return { add, clear, get };
+}
+
+
+/* ─────────────────────────────────────────────────────────────
+   SECTION 1 — BATCH PREDICTION
+───────────────────────────────────────────────────────────── */
+const batchPredictBtn  = document.getElementById("batchPredictBtn");
+const batchClearBtn    = document.getElementById("batchClearBtn");
+const batchStatus      = document.getElementById("batchStatus");
+const batchResultsWrap = document.getElementById("batchResultsWrap");
+const batchSummaryCards = document.getElementById("batchSummaryCards");
+const batchTableBody   = document.getElementById("batchTableBody");
+
+let batchFiles = [];
+
+const batchUploader = makeUploader("batchUploadArea", "batchInput", "batchChips", files => {
+  batchFiles = files;
+  const has = files.length > 0;
+  batchPredictBtn.disabled = !has;
+  batchClearBtn.style.display = has ? "inline-block" : "none";
+  if (has) {
+    if (files.length > 100) {
+      batchFiles = files.slice(0, 100);
+      setStatus(batchStatus, `<i class="fas fa-exclamation-triangle me-2"></i>Trimmed to 100 images (maximum allowed).`, "warning");
+    } else {
+      setStatus(batchStatus, `<i class="fas fa-info-circle me-2"></i>${files.length} image(s) ready for batch prediction.`, "info");
+    }
+  } else {
+    clearStatus(batchStatus);
+  }
+});
+
+batchClearBtn.addEventListener("click", () => {
+  batchUploader.clear();
+  batchResultsWrap.style.display = "none";
+});
+
+batchPredictBtn.addEventListener("click", async () => {
+  if (!batchFiles.length) return;
+
+  batchPredictBtn.classList.add("loading");
+  batchPredictBtn.disabled = true;
+  batchResultsWrap.style.display = "none";
+  setStatus(batchStatus, `<i class="fas fa-spinner fa-spin me-2"></i>Running batch prediction on ${batchFiles.length} image(s)…`, "info");
+
+  const formData = new FormData();
+  // FastAPI param name is "files" — must match exactly
+  batchFiles.forEach(f => formData.append("files", f));
+
+  try {
+    const res = await fetch(`${API_BASE}/predict_batch`, { method: "POST", body: formData });
+
+    if (!res.ok) {
+      let detail = `HTTP ${res.status}`;
+      try { detail = (await res.json()).detail || detail; } catch (_) {}
+      throw new Error(detail);
+    }
+
+    const data = await res.json();
+    renderBatchResults(data);
+    setStatus(batchStatus,
+      `<i class="fas fa-check-circle me-2"></i>Completed: <strong>${data.total_images}</strong> image(s) in <strong>${data.total_time_ms.toFixed(1)} ms</strong>.`,
+      "success");
+
+  } catch (err) {
+    setStatus(batchStatus, `<i class="fas fa-times-circle me-2"></i>Batch prediction failed: ${err.message}`, "error");
+  } finally {
+    batchPredictBtn.classList.remove("loading");
+    batchPredictBtn.disabled = false;
+  }
+});
+
+function renderBatchResults(data) {
+  // Summary cards
+  batchSummaryCards.innerHTML = `
+    <div class="summary-card"><div class="sc-val">${data.total_images}</div><div class="sc-lbl">Images processed</div></div>
+    <div class="summary-card"><div class="sc-val">${data.total_time_ms.toFixed(1)} ms</div><div class="sc-lbl">Total time</div></div>
+    <div class="summary-card"><div class="sc-val">${data.average_time_per_image_ms.toFixed(1)} ms</div><div class="sc-lbl">Avg per image</div></div>
+  `;
+
+  const preds = data.predictions || [];
+  batchTableBody.innerHTML = "";
+
+  if (!preds.length) {
+    batchTableBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">No predictions returned.</td></tr>';
+  } else {
+    preds.forEach((pred, i) => {
+      /* Your predictor may return 'predicted_character' or 'label' — handle both */
+      const char    = pred.predicted_character ?? pred.label ?? pred.character ?? "?";
+      const confRaw = pred.confidence          ?? pred.confidence_score ?? 0;
+      const confPct = pred.confidence_percent  ?? (confRaw * 100);
+      const timeMs  = pred.inference_time_ms   ?? 0;
+      /* Filename: batch endpoint doesn't echo it, so fall back to the file object */
+      const fname   = pred.filename ?? pred.image_name ?? batchFiles[i]?.name ?? `image_${i + 1}`;
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td style="color:#aaa; font-size:0.82rem;">${i + 1}</td>
+        <td><span class="fname-cell" title="${fname}">${fname}</span></td>
+        <td><span class="char-big">${char}</span></td>
+        <td><span class="conf-pill ${confClass(confPct)}">${confPct.toFixed(1)}%</span></td>
+        <td style="color:#6c757d;">${timeMs > 0 ? timeMs.toFixed(1) : "—"}</td>
+      `;
+      batchTableBody.appendChild(tr);
+    });
+  }
+
+  batchResultsWrap.style.display = "block";
+  batchResultsWrap.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+
+/* ─────────────────────────────────────────────────────────────
+   SECTION 2 — UPLOAD TRAINING DATA  →  POST /upload_data
+   FastAPI signature: files: List[UploadFile], label: str = Form(...)
+───────────────────────────────────────────────────────────── */
+const uploadDataBtn = document.getElementById("uploadDataBtn");
+const labelInput    = document.getElementById("labelInput");
+const dataStatus    = document.getElementById("dataStatus");
+let dataFiles = [];
+
+const dataUploader = makeUploader("dataUploadArea", "dataInput", "dataChips", files => {
+  dataFiles = files;
+  syncUploadBtn();
+});
+
+labelInput.addEventListener("input", syncUploadBtn);
+
+function syncUploadBtn() {
+  uploadDataBtn.disabled = !(dataFiles.length > 0 && labelInput.value.trim().length > 0);
+}
+
+uploadDataBtn.addEventListener("click", async () => {
+  const label = labelInput.value.trim();
+  if (!label || !dataFiles.length) return;
+
+  uploadDataBtn.classList.add("loading");
+  uploadDataBtn.disabled = true;
+  setStatus(dataStatus, `<i class="fas fa-spinner fa-spin me-2"></i>Uploading ${dataFiles.length} file(s) for label "<strong>${label}</strong>"…`, "info");
+
+  const formData = new FormData();
+  dataFiles.forEach(f => formData.append("files", f));   // field name = "files"
+  formData.append("label", label);                        // field name = "label"
+
+  try {
+    const res = await fetch(`${API_BASE}/upload_data`, { method: "POST", body: formData });
+
+    if (!res.ok) {
+      let detail = `HTTP ${res.status}`;
+      try { detail = (await res.json()).detail || detail; } catch (_) {}
+      throw new Error(detail);
+    }
+
+    const result = await res.json();
+    setStatus(dataStatus,
+      `<i class="fas fa-check-circle me-2"></i>Saved <strong>${result.files_saved}</strong> file(s) for label "<strong>${result.label}</strong>". Ready for retraining.`,
+      "success");
+
+    // Reset
+    dataUploader.clear();
+    labelInput.value = "";
+    syncUploadBtn();
+
+  } catch (err) {
+    setStatus(dataStatus, `<i class="fas fa-times-circle me-2"></i>Upload failed: ${err.message}`, "error");
+  } finally {
+    uploadDataBtn.classList.remove("loading");
+    syncUploadBtn();
+  }
+});
+
+
+/* ─────────────────────────────────────────────────────────────
+   SECTION 3 — RETRAIN  →  POST /retrain  (JSON body)
+   FastAPI RetrainRequest: { epochs: int, learning_rate: float }
+   Polls GET /training_status every 3 s while is_training === true
+───────────────────────────────────────────────────────────── */
+const retrainBtn            = document.getElementById("retrainBtn");
+const epochsInput           = document.getElementById("epochsInput");
+const lrInput               = document.getElementById("lrInput");
+const retrainStatus         = document.getElementById("retrainStatus");
+const trainingProgressWrap  = document.getElementById("trainingProgressWrap");
+const progressBar           = document.getElementById("progressBar");
+const progressLabel         = document.getElementById("progressLabel");
+const progressPct           = document.getElementById("progressPct");
+const trainingStats         = document.getElementById("trainingStats");
+
+let pollTimer = null;
+
+retrainBtn.addEventListener("click", async () => {
+  const epochs = parseInt(epochsInput.value, 10);
+  const lr     = parseFloat(lrInput.value);
+
+  if (!epochs || epochs < 1 || epochs > 100) {
+    setStatus(retrainStatus, " Epochs must be between 1 and 100.", "error"); return;
+  }
+  if (isNaN(lr) || lr <= 0 || lr > 0.1) {
+    setStatus(retrainStatus, " Learning rate must be between 0.000001 and 0.1.", "error"); return;
+  }
+
+  retrainBtn.classList.add("loading");
+  retrainBtn.disabled = true;
+  trainingProgressWrap.style.display = "none";
+  setStatus(retrainStatus, `<i class="fas fa-spinner fa-spin me-2"></i>Submitting retraining job (${epochs} epoch(s), lr=${lr})…`, "info");
+
+  try {
+    const res = await fetch(`${API_BASE}/retrain`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      // Body matches RetrainRequest exactly
+      body: JSON.stringify({ epochs, learning_rate: lr })
+    });
+
+    if (!res.ok) {
+      let detail = `HTTP ${res.status}`;
+      try { detail = (await res.json()).detail || detail; } catch (_) {}
+      throw new Error(detail);
+    }
+
+    const result = await res.json();
+
+    if (result.status === "already_training") {
+      setStatus(retrainStatus, " A training job is already running. Wait for it to finish before starting another.", "warning");
+    } else {
+      // status = "started"
+      setStatus(retrainStatus,
+        `<i class="fas fa-check-circle me-2"></i>Job started! Training <strong>${result.epochs}</strong> epoch(s) at lr=<strong>${result.learning_rate}</strong>. Polling for updates…`,
+        "info");
+      showProgressUI(epochs);
+      startPolling(epochs);
+    }
+
+  } catch (err) {
+    setStatus(retrainStatus, `<i class="fas fa-times-circle me-2"></i>Failed to start retraining: ${err.message}`, "error");
+  } finally {
+    retrainBtn.classList.remove("loading");
+    retrainBtn.disabled = false;
+  }
+});
+
+function showProgressUI(totalEpochs) {
+  trainingProgressWrap.style.display = "block";
+  progressBar.style.width = "0%";
+  progressPct.textContent = "0%";
+  progressLabel.textContent = "Training in progress…";
+  trainingStats.innerHTML = `
+    <div class="training-stat"><div class="ts-value" id="tsEpochs">—</div><div class="ts-label">Current epoch</div></div>
+    <div class="training-stat"><div class="ts-value" id="tsStatus">—</div><div class="ts-label">Status</div></div>
+    <div class="training-stat"><div class="ts-value" id="tsTime">—</div><div class="ts-label">Last updated</div></div>
+  `;
+}
+
+function startPolling(totalEpochs) {
+  if (pollTimer) clearInterval(pollTimer);
+  let lastStatus = "";
+
+  pollTimer = setInterval(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/training_status`);
+      if (!res.ok) return;
+      const data = await res.json();
+
+      // Update status text in stat cards
+      const tsStatus = document.getElementById("tsStatus");
+      const tsTime   = document.getElementById("tsTime");
+      if (tsStatus) tsStatus.textContent = data.status ?? "—";
+      if (tsTime)   tsTime.textContent   = data.last_training_time
+        ? new Date(data.last_training_time).toLocaleTimeString()
+        : "—";
+
+      // Rough progress from status string (the task sets status = "preprocessing" / "training" / "completed")
+      let pct = 10;
+      if (data.status === "training")       pct = 50;
+      if (data.status === "completed")      pct = 100;
+      if (data.status?.startsWith("failed")) pct = 0;
+      progressBar.style.width = pct + "%";
+      progressPct.textContent = pct + "%";
+      progressLabel.textContent = `Status: ${data.status ?? "unknown"}`;
+
+      if (!data.is_training) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+
+        if (data.status === "completed") {
+          setStatus(retrainStatus,
+            `<i class="fas fa-check-circle me-2"></i>Retraining completed successfully! Last trained: ${data.last_training_time ?? "just now"}.`,
+            "success");
+        } else {
+          setStatus(retrainStatus,
+            `<i class="fas fa-times-circle me-2"></i>Training ended with status: <strong>${data.status}</strong>. Check server logs for details.`,
+            "error");
+        }
+      }
+
+    } catch (_) { /* silently skip failed poll */ }
+  }, 3000);
+}
+
+
+/* ─────────────────────────────────────────────────────────────
+   HEALTH CHECK ON LOAD
+───────────────────────────────────────────────────────────── */
+(async function checkHealth() {
+  for (let i = 0; i < 5; i++) {
+    try {
+      const res = await fetch(`${API_BASE}/health`);
+      if (res.ok) {
+        const h = await res.json();
+        if (!h.model_loaded) console.warn("Backend healthy but model is not loaded.");
+        else console.log("✓ Backend healthy, model loaded.");
+        return;
+      }
+    } catch (_) {}
+    await new Promise(r => setTimeout(r, 1200));
+  }
+  console.warn("Backend did not respond after 5 attempts.");
+})();
+</script>
+</body>
+</html>
